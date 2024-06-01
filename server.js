@@ -85,6 +85,28 @@ app.get('/api/restaurants', async (req, res) => {
     }
 });
 
+// for updating restaurant
+app.put('/api/restaurants/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, address, image, mobile } = req.body;
+    try {
+        const result = await db.query(
+            'UPDATE restaurants SET name = $1, address = $2, image_url = $3, mobile = $4 WHERE id = $5 RETURNING *',
+            [name, address, image, mobile, id]
+        );
+        if (result.rows.length > 0) {
+            res.json(result.rows[0]);
+        } else {
+            res.status(404).json({ error: 'Restaurant not found' });
+        }
+    } catch (error) {
+        console.error('Error updating restaurant:', error);
+        res.status(500).json({ error: 'Failed to update restaurant' });
+    }
+});
+
+
+
 app.listen(3000, () => {
     console.log('Server running on http://localhost:3000');
 })

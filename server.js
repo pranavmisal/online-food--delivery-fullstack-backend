@@ -43,11 +43,11 @@ app.post('/api/auth/signup', async (req, res) => {
 
 // for login
 app.post('/api/auth/login', async (req, res) => {
-    const { email, password } = req.body;
+    const { identifier, password } = req.body;
     try{
         const result = await db.query(
-            'select * from users where email = $1 and password = $2',
-            [email, password]
+            `select * from users where (email = $1 or username = $1 or mobile_number::text = $1) and password = $2`,
+            [identifier, password]
         );
         if (result.rows.length > 0){
             res.json(result.rows[0]);

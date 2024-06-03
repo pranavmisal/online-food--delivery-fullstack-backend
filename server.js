@@ -105,7 +105,24 @@ app.put('/api/restaurants/:id', async (req, res) => {
     }
 });
 
-
+// for deleting restaurant
+app.delete('/api/restaurants/:id', async(req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await db.query(
+            'delete from restaurants where id = $1 returning *',
+            [id]
+        );
+        if (result.rows.length > 0) {
+            res.json({ message: 'Restaurant deleted successfully' });
+        } else {
+            res.status(404).json({error: 'Restaurant not found'});
+        }
+    } catch (error){
+        console.error('Error deleting restaurant:', error);
+        res.status(500).json({ error: 'Falied to delete restaurant' });
+    }
+});
 
 app.listen(3000, () => {
     console.log('Server running on http://localhost:3000');

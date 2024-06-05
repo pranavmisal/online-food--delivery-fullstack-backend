@@ -124,6 +124,73 @@ app.delete('/api/restaurants/:id', async(req, res) => {
     }
 });
 
+// for saving a menu item
+app.post('/api/restaurants/:restaurantId/menus', async (req, res) => {
+    const { restaurantId } = req.params;
+    const { name, description, price } = req.body;
+    try {
+        const result = await db.query(
+            'insert into menu_items (restaurant_id, name, description, price) values ($1, $2, $3, $4) returning *',
+            [restaurantId, name, description, price]
+        );
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error saving menu item:', error);
+        res.status(500).json({ error: 'Failed to save menu item' });
+    }
+});
+
+// for fetching menu items by restaurant
+app.get('/api/restaurants/:restaurantId/menus', async (req, res) => {
+    const { restaurantId } = req.params;
+    try {
+        const result = await db.query('select * from menu_items where restaurant_id = $1', [restaurantId]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching menu items:', error);
+        res.status(500).json({ error: 'Failed to fetch menu items' });
+    }
+});
+
+// for updating a menu item
+app.put('/api/menus/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, description, price } = req.body;
+    try {
+        const result = await db.query(
+            'update menu_items set name = $1, description = $2, price = $3 where id = $4 returning *',
+            [name, description, price, id]
+        );
+        if (result.rows.length > 0) {
+            res.json(result.rows[0]);
+        } else {
+            res.status(404).json({ error: 'Menu item not found' });
+        }
+    } catch (error) {
+        console.error('Error updating menu item:', error);
+        res.status(500).json({ error: 'Failed to update menu item' });
+    }
+});
+
+// for deleting a menu item
+app.delete('/api/menus/:id', async (req, res) => {
+    const {id} = req.params;
+    try {
+        const result = await db.query(
+            'delete from menu_items where id = $1 returning *',
+            [id]
+        );
+        if (result.rows.length > 0) {
+            res.json({message: 'Menu item deleted successfully'});
+        } else {
+            res.status(404).json({error: 'Menu item not found'});
+        }
+    } catch (error){
+        console.error('Error deleting menu item:', error);
+        res.status(500).json({error: 'Failed to delete menu item'});
+    }
+});
+
 app.listen(3000, () => {
     console.log('Server running on http://localhost:3000');
 })

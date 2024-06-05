@@ -191,6 +191,28 @@ app.delete('/api/menus/:id', async (req, res) => {
     }
 });
 
+// for placing an order
+app.post('/api/orders', async (req, res) => {
+    const { user_id, orderItems, total_price } = req.body;
+    try {
+        await db.query('BEGIN'); // Start transaction
+
+        for (const item of orderItems) {
+            await db.query(
+                'INSERT INTO orders (user_id, menu_item_id, quantity, total_price) VALUES ($1, $2, $3, $4)',
+                [user_id, item.menu_item_id, item.quantity, item.total_price]
+            );
+        }
+
+        await db.query('COMMIT'); // Commit transaction
+        res.json({ message: 'Order placed successfully' });
+    } catch (error) {
+        await db.query('ROLLBACK'); // Rollback transaction in case of error
+        console.error('Error placing order:', error);
+        res.status(500).json({ error: 'Failed to place order' });
+    }
+});
+
 app.listen(3000, () => {
     console.log('Server running on http://localhost:3000');
 })

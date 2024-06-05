@@ -213,6 +213,26 @@ app.post('/api/orders', async (req, res) => {
     }
 });
 
+// for fetching a user's order history
+app.get('/api/users/:userId/orders', async (req, res) => {
+    const { userId } = req.params;
+    try {
+        const result = await db.query(
+            `select o.id, o.quantity, o.total_price, o.created_at as order_date, mi.name as menu_item_name, r.name as restaurant_name
+            from orders o
+            join menu_items mi on o.menu_item_id = mi.id
+            join restaurants r on mi.restaurant_id = r.id
+            where o.user_id = $1
+            order by o.created_at desc`,
+            [userId]
+        );
+        res.json(result.rows);
+    } catch (error){
+        console.error('Error fetching order history:', error);
+        res.status(500).json({error: 'Failed to fetch order history'});
+    }
+});
+
 app.listen(3000, () => {
     console.log('Server running on http://localhost:3000');
 })

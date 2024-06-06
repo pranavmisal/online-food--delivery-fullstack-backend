@@ -5,7 +5,12 @@ const { Client } = require('pg');
 
 const app = express();
 app.use(bodyParser.json());
+app.use(cors({origin: 'http://localhost:4200'}));
 app.use(cors());
+
+// Increase payload size limit
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 // PostgreSQL connection setup
 const db = new Client({
@@ -61,11 +66,11 @@ app.post('/api/auth/login', async (req, res) => {
 
 // for save restaurant
 app.post('/api/restaurants', async (req, res) => {
-    const { name, address, image, mobile } = req.body;
+    const { name, address, image_url, mobile } = req.body;
     try{
         const result = await db.query(
             'insert into restaurants (name, address, image_url, mobile) values ($1, $2, $3, $4) returning *',
-            [name, address, image, mobile]
+            [name, address, image_url, mobile]
         );
         res.json(result.rows[0]);
     } catch (error){
@@ -88,11 +93,11 @@ app.get('/api/restaurants', async (req, res) => {
 // for updating restaurant
 app.put('/api/restaurants/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, address, image, mobile } = req.body;
+    const { name, address, image_url, mobile } = req.body;
     try {
         const result = await db.query(
             'UPDATE restaurants SET name = $1, address = $2, image_url = $3, mobile = $4 WHERE id = $5 RETURNING *',
-            [name, address, image, mobile, id]
+            [name, address, image_url, mobile, id]
         );
         if (result.rows.length > 0) {
             res.json(result.rows[0]);

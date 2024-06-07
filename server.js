@@ -238,6 +238,42 @@ app.get('/api/users/:userId/orders', async (req, res) => {
     }
 });
 
+// for fetching user details
+app.get('/api/users:userId', async (req, res) => {
+    const {userId} = req.params;
+    try{
+        const result = await db.query('select * from users where id = $1', [userId]);
+        if (result.rows.length > 0) {
+            res.json(result.rows[0]);
+        } else {
+            res.status(404).json({error: 'User not found'});
+        }
+    } catch (error) {
+        console.error ('Error fetching user details:', error);
+        res.status(500).json({error: 'Failed to fetch user details'});
+    }
+});
+
+// for updating user profile
+app.put('/api/auth/profile/:id', async (req,res) => {
+    const {id} = req.params;
+    const { username, email, full_name, mobile_number, address } = req.body;
+    try {
+        const result = await db.query(
+            'update users set username = $1, email = $2, full_name = $3, mobile_number = $4, address = $5 where id = $6 returning *',
+            [username, email, full_name, mobile_number, address, id]
+        );
+        if (result.rows.length > 0) {
+            res.json(result.rows[0]);
+        } else {
+            res.status(404).json({error: 'User not found'});
+        }
+    } catch (error) {
+        console.error('Error updating user profile:', error);
+        res.status(500).json({error: 'Failed to update user profile'});
+    }
+})
+
 app.listen(3000, () => {
     console.log('Server running on http://localhost:3000');
 })

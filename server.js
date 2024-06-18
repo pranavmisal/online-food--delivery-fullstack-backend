@@ -223,7 +223,7 @@ app.get('/api/users/:userId/orders', async (req, res) => {
     const { userId } = req.params;
     try {
         const result = await db.query(
-            `select o.id, o.quantity, o.total_price, o.created_at as order_date, mi.name as menu_item_name, r.name as restaurant_name
+            `select o.id, o.quantity, o.total_price, o.created_at as order_date, o.rating, o.review, mi.name as menu_item_name, r.name as restaurant_name
             from orders o
             join menu_items mi on o.menu_item_id = mi.id
             join restaurants r on mi.restaurant_id = r.id
@@ -273,6 +273,61 @@ app.put('/api/auth/profile/:id', async (req,res) => {
         res.status(500).json({error: 'Failed to update user profile'});
     }
 })
+
+// for submitting review and rating
+app.post('/api/orders/:orderId/review', async (req, res) => {
+    const {orderId} = req.params;
+    const {rating, review} = req.body;
+    try {
+        const result = await db.query(
+            'update orders set rating = $1, review = $2 where id = $3 returning *',
+            [rating, review, orderId]
+        );
+        if (result.rows.length > 0){
+            res.json(result.rows[0]);
+        } else {
+            res.status(404).json({error: 'Order not found'});
+        }
+    } catch (error) {
+        console.error('Error submitting review and rating:', error);
+        res.status(500).json({error: 'Failed to submit review and rating'});
+    }
+})
+
+// for fetching restaurants with their average rating
+app.get('/api/restaurants/with-ratings', async (req, res) => {
+    try {
+        const result = await db.query(
+            `select r.*, coalesce(avg(o.rating), 0) as average_rating
+            from restaurants r
+            left join menu_items mi on r.id = mi.restaurant_id
+            left join orders o on mi.id = o.menu_item_id
+            group by r.id`
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching restaurants with ratings:', error);
+        res.status(500).json({error: 'Failed to fetch restaurants with ratings'});
+    }
+});
+
+// for fetching reviews and rating for a specific menu item
+app.get('/api/menus/:menuId/reviews', async (req, res) => {
+   const {menuId} = req.params;
+   try{
+    const result = await db.query(
+        `select rating, review, created_at
+        from orders
+        where menu_item_id = $1 and rating is not null and review is not null
+        order by created_at desc`,
+        [menuId]
+    );
+    res.json(result.rows);
+   } catch (error) {
+    console.error('Error fetching reviews and ratings:', error);
+    res.status(500).json({error: 'Failed to fetch reviews and ratings'})
+   }
+});
 
 app.listen(3000, () => {
     console.log('Server running on http://localhost:3000');

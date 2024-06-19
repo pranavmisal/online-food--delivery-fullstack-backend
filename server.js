@@ -33,16 +33,38 @@ db.connect().then(() => {
 });
 
 // for signup
+// app.post('/api/auth/signup', async (req, res) => {
+//     const { username, email, password, fullName, mobile, address } = req.body;
+//     try {
+//         const result = await db.query(
+//             'insert into users (username, email, password, full_name, mobile_number, address) values ($1, $2, $3, $4, $5, $6) returning *',
+//             [username, email, password, fullName, mobile, address]
+//         );
+//         res.json(result.rows[0]);
+//     } catch (error) {
+//         res.status(500).json({ error: error.message });
+//     }
+// });
 app.post('/api/auth/signup', async (req, res) => {
-    const { username, email, password, fullName, mobile, address } = req.body;
+    const {username, email, password, fullName, mobile, address} = req.body;
     try {
-        const result = await db.query(
-            'insert into users (username, email, password, full_name, mobile_number, address) values ($1, $2, $3, $4, $5, $6) returning *',
-            [username, email, password, fullName, mobile, address]
+        await db.query('BEGIN');
+        // insert user data
+        const userResult = await db.query(
+            'insert into users (username, email, password, full_name, mobile_number) values ($1, $2, $3, $4, $5) returning *',
+            [username, email, password, fullName, mobile]
         );
-        res.json(result.rows[0]);
+        const userId = userResult.rows[0].id;
+        // insert address data
+        const addressResult = await db.query(
+            'insert into addresses (user_id, address_line1, address_line2, city, state, postal_code, country) values ($1, $2, $3, $4, $5, $6, $7) returning *',
+            [userId, address.addressLine1, address.addressLine2, address.city, address.state, address.postalCode, address.country]
+        );
+        await db.query('COMMIT');
+        res.json({user: userResult.rows[0], address: addressResult.rows[0]});
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        await db.query('ROLLBACK');
+        res.status(500).json({error: error.message});
     }
 });
 
@@ -239,7 +261,7 @@ app.get('/api/users/:userId/orders', async (req, res) => {
 });
 
 // for fetching user details
-app.get('/api/users:userId', async (req, res) => {
+app.get('/api/users/:userId', async (req, res) => {
     const {userId} = req.params;
     try{
         const result = await db.query('select * from users where id = $1', [userId]);
@@ -253,6 +275,18 @@ app.get('/api/users:userId', async (req, res) => {
         res.status(500).json({error: 'Failed to fetch user details'});
     }
 });
+
+// for fetching user addresses
+app.get('/api/auth/users/:userId/addresses', async (req, res) => {
+    const {userId} = req.params;
+    try{
+        const result = await db.query('select * from addresses where user_id = $1', [userId]);
+        res.json(result.rows);
+    } catch(error) {
+        console.error('Error fetching user address:', error);
+        res.status(500).json({error: 'Failed to fetch user address'});
+    }
+})
 
 // for updating user profile
 app.put('/api/auth/profile/:id', async (req,res) => {

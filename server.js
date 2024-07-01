@@ -334,6 +334,34 @@ app.get('/api/menus/:menuId/reviews', async (req, res) => {
    }
 });
 
+// for forgot password
+app.post('/api/auth/forgot-password', async (req, res) => {
+    const {identifier, newPassword} = req.body;
+    try {
+        const userQuery = await db.query(
+            'select * from users where email = $1 or username = $1',
+            [identifier]
+        );
+        if (userQuery.rows.length === 0){
+            return res.status(404).json({error: 'User not found'});
+        }
+        const userId = userQuery.rows[0].id;
+        // update users password
+        const updateQuery = await db.query(
+            'update users set password = $1 where id = $2',
+            [newPassword, userId]
+        );
+        if (updateQuery.rowCount > 0) {
+            res.json({message: 'Password changed successfully'});
+        } else {
+            res.status(500).json({error: 'Failed to update password'});
+        }
+    } catch (error){
+        console.error('Error changing password:', error);
+        res.status(500).json({error: 'Failed to change password'});
+    }
+})
+
 app.listen(3000, () => {
     console.log('Server running on http://localhost:3000');
 })
